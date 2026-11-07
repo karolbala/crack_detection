@@ -1,11 +1,11 @@
-   data/
-   mlruns/
-   *.ckpt
-   *.tif
-   __pycache__/
-   .env
-   .venv/
-   *.egg-info/
-   .idea/
+data/
+mlruns/
+*.ckpt
+*.tif
+__pycache__/
+.env
+.venv/
+*.egg-info/
+.idea/
    
  
