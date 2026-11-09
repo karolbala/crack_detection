@@ -5,12 +5,12 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-
+from crackseg.transform import get_transforms
 
 class CrackDataset(Dataset):
     """Reads sample pairs listed in manifest"""
     def __init__(self, manifest: Path,data_dir: Path, split : str, transform=None):
-        self.data_dir = data_dir
+        self.data_dir = Path(data_dir)
         self.transform = transform
         samples_df  = pd.read_csv(manifest, sep=',', dtype={"mask_format": str})
 
@@ -43,9 +43,9 @@ class CrackDataset(Dataset):
 
 
         if self.transform is not None:
-            out = self.transform(img = img, mask = mask)
+            out = self.transform(image = img, mask = mask)
 
-            return out["image"], out["mask"].unsqueeze(0)
+            return out["image"], out["mask"].unsqueeze(0)   #unsqueeze na potrzeby pytorcha  - dla maski dodaje sztuczny kanal który gubi opencv a dla obrazka sztyuczny rozmai batcha - 1
         else:
             return img, mask
 
@@ -58,4 +58,14 @@ if __name__ == "__main__":
         ds = CrackDataset(manifest, data_dir, s)
         print(s, len(ds))
 
-    CrackDataset(manifest, data_dir, "Train")   # literówka: ma rzucić czytelny ValueError
+    #CrackDataset(manifest, data_dir, "Train")   # literówka: ma rzucić czytelny ValueError
+
+
+    ds = CrackDataset(manifest, data_dir, "train", transform=get_transforms(train=True))
+    img, mask = ds[0]
+    print(img.shape, img.dtype, mask.shape, mask.dtype, mask.unique())
+
+
+
+
+    '''WAŻNE!!!! DO DODANIA PRZENIESIENIE LOGIKI KONWERSJI NA TENSOR I NORMALIZACJI BEZPOŚREDNIO DO DATASETU ŻEBY UNIEZALEŻNIĆ TEN KROK OD ISTNIENIA TRANSFORMERA'''
