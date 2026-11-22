@@ -5,13 +5,17 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 from crackseg.transform import get_transforms
+
 
 class CrackDataset(Dataset):
     """Reads sample pairs listed in manifest"""
     def __init__(self, manifest: Path,data_dir: Path, split : str, transform=None):
         self.data_dir = Path(data_dir)
         self.transform = transform
+        self.to_tensor = A.Compose([A.Normalize(), ToTensorV2()])   # zawsze, niezależnie od augmentacji; Normalize = statystyki ImageNet
         samples_df  = pd.read_csv(manifest, sep=',', dtype={"mask_format": str})
 
         self.split_samples_df = samples_df.loc[samples_df["split"] == split].reset_index(drop=True)
@@ -24,7 +28,8 @@ class CrackDataset(Dataset):
         '''returns number of samples in split'''
         return len(self.split_samples_df)
 
-    def __getitem__(self, idx: int) -> torch.Tensor:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+        '''returns (image, mask): image float32 (3, H, W) normalized, mask float32 (1, H, W) in {0, 1}'''
         row = self.split_samples_df.iloc[idx]
         img_path = self.data_dir / row["image"]   #wczytanie zadanego obrazka
         mask_path = self.data_dir / row["mask"]
@@ -42,18 +47,17 @@ class CrackDataset(Dataset):
             raise ValueError(f"Mask format {mask_format} is not supported.")
 
 
-        if self.transform is not None:
+        if self.transform is not None:                      # transform = tylko augmentacje, numpy -> numpy
             out = self.transform(image = img, mask = mask)
+            img, mask = out["image"], out["mask"]
 
-            return out["image"], out["mask"].unsqueeze(0)   #unsqueeze na potrzeby pytorcha  - dla maski dodaje sztuczny kanal który gubi opencv a dla obrazka sztyuczny rozmai batcha - 1
-        else:
-            return img, mask
+        out = self.to_tensor(image = img, mask = mask)     # normalizacja + HWC -> CHW
+        return out["image"], out["mask"].unsqueeze(0)      # maska (H, W) -> (1, H, W): kanał maski, batch dokłada DataLoader
 
 
 if __name__ == "__main__":
     manifest = Path("manifests/manifest.csv")
     data_dir = Path("data/raw/deepcrack")
-
     for s in ("train", "val", "test"):
         ds = CrackDataset(manifest, data_dir, s)
         print(s, len(ds))
@@ -65,7 +69,6 @@ if __name__ == "__main__":
     img, mask = ds[0]
     print(img.shape, img.dtype, mask.shape, mask.dtype, mask.unique())
 
-
-
-
-    '''WAŻNE!!!! DO DODANIA PRZENIESIENIE LOGIKI KONWERSJI NA TENSOR I NORMALIZACJI BEZPOŚREDNIO DO DATASETU ŻEBY UNIEZALEŻNIĆ TEN KROK OD ISTNIENIA TRANSFORMERA'''
+    ds = CrackDataset(manifest, data_dir, "train")       # bez transformu - format wyjścia ma być ten sam
+    img, mask = ds[0]
+    print(img.shape, img.dtype, mask.shape, mask.dtype, mask.unique())
