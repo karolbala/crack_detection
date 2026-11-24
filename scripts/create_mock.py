@@ -1,7 +1,12 @@
+import logging
 import cv2, numpy as np
 from pathlib import Path
+from crackseg.logging_utils import setup_logging
 
 '''Simple utility scirpt for generating mock data'''
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 root = Path("data/raw/mock")
 (root / "images").mkdir(parents=True, exist_ok=True)
@@ -17,7 +22,9 @@ for i in range(50):
     img[mask > 0] = 30
     cv2.imwrite(str(root / "images" / f"{i:03d}.jpg"), img)
     cv2.imwrite(str(root / "masks" / f"{i:03d}.png"), mask)
-    print(f"generated {i} pair")
+    logger.debug("generated pair %d", i)
+
+logger.info("generated 50 mock pairs in %s", root)
 
 
 #obvious errors to be catched by direct file

@@ -1,0 +1,38 @@
+seed: 42
+
+# argumenty CrackDataModule (crackseg/datamodule.py)
+data:
+  manifest: manifests/manifest.csv
+  data_dir: data/raw/deepcrack
+  batch_size: 8
+  num_workers: 0        # na Windowsie >0 bywa problematyczne, potem można podbić
+  crop: 384
+
+# argumenty CrackSegModel (crackseg/model.py)
+model:
+  arch: Unet
+  encoder: resnet34
+  lr: 3.0e-4            # w YAML "3e-4" bez kropki parsuje się jako string!
+
+# argumenty L.Trainer - przekazywane bezpośrednio przez **
+trainer:
+  max_epochs: 50
+  accelerator: auto
+  devices: 1
+  precision: 32         # na GPU można dać "16-mixed"
+  log_every_n_steps: 10
+  default_root_dir: outputs   # checkpointy trafią do outputs/<id_eksperymentu>/<id_runu>/checkpoints
+
+# czytane w train.py przy budowaniu ModelCheckpoint / EarlyStopping
+callbacks:
+  monitor: val/dice
+  mode: max
+  patience: 10
+  save_top_k: 1
+
+# czytane w train.py przy budowaniu MLFlowLogger
+mlflow:
+  tracking_uri: sqlite:///mlflow.db
+  experiment_name: crackseg
+  run_name: unet_r34_crop384
+  log_model: false

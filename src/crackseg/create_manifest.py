@@ -1,6 +1,6 @@
 from typing import List, Literal
+import logging
 from pathlib import Path
-import sys
 import numpy as np
 import cv2
 import pandas as pd
@@ -21,6 +21,8 @@ code should be run from base project directory
 '''
 FileType = Literal["*.png", "*.jpg", "*.tiff", "*.jpeg"]
 
+logger = logging.getLogger(__name__)
+
 
 def pair_sample_by_id(img_dir: Path, mask_dir: Path, img_filetype: FileType, mask_filetype: FileType) -> List[tuple[Path, Path]]:
     '''Pairs samples by id's, returns warning for orphan samples'''
@@ -37,16 +39,17 @@ def pair_sample_by_id(img_dir: Path, mask_dir: Path, img_filetype: FileType, mas
     mask_orphans = masks.keys() - imgs.keys()  # maski bez obrazu
 
     if img_orphans:
-        print(f"WARNING: {len(img_orphans)} images without mask: {sorted(img_orphans)[:10]}", file=sys.stderr)
+        logger.warning("%d images without mask: %s", len(img_orphans), sorted(img_orphans)[:10])
     if mask_orphans:
-        print(f"WARNING: {len(mask_orphans)} masks without image: {sorted(mask_orphans)[:10]}", file=sys.stderr)
+        logger.warning("%d masks without image: %s", len(mask_orphans), sorted(mask_orphans)[:10])
 
     for sample_id in sorted(matching_ids):
         img = imgs[sample_id]
         mask = masks[sample_id]
         pairs.append((sample_id, img, mask))
-        print("paired")
+        logger.debug("paired %s", sample_id)
 
+    logger.info("%s: paired %d samples", img_dir, len(pairs))
     return pairs
 
 
@@ -144,5 +147,10 @@ def build_manifests(dataset, data_dir: Path, val_frac = 0.15, test_frac = 0, see
 
 
 
-df = build_manifests(deep_crack,Path("data/raw/deepcrack"))
-df.to_csv(Path("manifests/manifest.csv"), index=False)
+if __name__ == "__main__":
+    from crackseg.logging_utils import setup_logging
+    setup_logging()
+
+    df = build_manifests(deep_crack,Path("data/raw/deepcrack"))
+    df.to_csv(Path("manifests/manifest.csv"), index=False)
+    logger.info("saved manifest with %d rows: %s", len(df), df["split"].value_counts().to_dict())

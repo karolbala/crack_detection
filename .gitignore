@@ -7,5 +7,6 @@ __pycache__/
 .venv/
 *.egg-info/
 .idea/
-   
- 
+outputs/
+logs/
+mlflow.db

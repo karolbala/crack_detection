@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import cv2
@@ -9,6 +10,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from crackseg.transform import get_transforms
 
+logger = logging.getLogger(__name__)
 
 class CrackDataset(Dataset):
     """Reads sample pairs listed in manifest"""
@@ -56,19 +58,24 @@ class CrackDataset(Dataset):
 
 
 if __name__ == "__main__":
+    from crackseg.logging_utils import setup_logging
+    setup_logging()
+
     manifest = Path("manifests/manifest.csv")
     data_dir = Path("data/raw/deepcrack")
     for s in ("train", "val", "test"):
         ds = CrackDataset(manifest, data_dir, s)
-        print(s, len(ds))
+        logger.info("split %s: %d samples", s, len(ds))
 
     #CrackDataset(manifest, data_dir, "Train")   # literówka: ma rzucić czytelny ValueError
 
 
     ds = CrackDataset(manifest, data_dir, "train", transform=get_transforms(train=True))
     img, mask = ds[0]
-    print(img.shape, img.dtype, mask.shape, mask.dtype, mask.unique())
+    logger.info("with transform: img %s %s, mask %s %s, mask values %s",
+                tuple(img.shape), img.dtype, tuple(mask.shape), mask.dtype, mask.unique().tolist())
 
     ds = CrackDataset(manifest, data_dir, "train")       # bez transformu - format wyjścia ma być ten sam
     img, mask = ds[0]
-    print(img.shape, img.dtype, mask.shape, mask.dtype, mask.unique())
+    logger.info("no transform:   img %s %s, mask %s %s, mask values %s",
+                tuple(img.shape), img.dtype, tuple(mask.shape), mask.dtype, mask.unique().tolist())
